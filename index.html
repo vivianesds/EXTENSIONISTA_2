@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Cesta Solidária</title>
+    <div class="card">
+    <h2>📦 Total em Estoque</h2>
+    <div id="stockSummary" style="display: flex; gap: 15px; flex-wrap: wrap;">
+        </div>
+</div>
+    <style>
+        .btn-delete {
+            background: #ff4d4d;
+            color: white;
+            border: none;
+            padding: 2px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 10px;
+            font-size: 0.8em;
+        }
+        .btn-delete:hover { background: #cc0000; }
+        li { margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🍞 Cesta Básica Solidária</h1>
+        
+        <div class="card">
+            <h2>Registrar Doação</h2>
+            <form id="donationForm">
+                <label for="item">Item:</label>
+                <select id="item" required>
+                    <option value="">Selecione...</option>
+                    <option value="arroz">Arroz</option>
+                    <option value="feijao">Feijão</option>
+                    <option value="oleo">Óleo</option>
+                </select>
+
+                <label for="quantity">Quantidade:</label>
+                <input type="number" id="quantity" min="1" required>
+
+                <button type="submit">Registrar</button>
+            </form>
+        </div>
+
+        <div class="card">
+            <h2>Doações Recentes</h2>
+            <ul id="donationsList"></ul>
+        </div>
+    </div>
+
+    <script>
+       // 1. Banco de dados inicial
+let donations = JSON.parse(localStorage.getItem('donations')) || [];
+
+// 2. Ouvinte do Formulário (Registrar nova doação)
+document.getElementById('donationForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const item = document.getElementById('item').value;
+    const quantity = document.getElementById('quantity').value;
+
+    if (item && quantity) {
+        const newDonation = {
+            id: Date.now(),
+            item: item,
+            quantity: parseInt(quantity), // Convertendo para número para somar certo
+            date: new Date().toLocaleDateString()
+        };
+
+        donations.push(newDonation);
+        saveAndRefresh();
+        e.target.reset();
+        alert('Doação registrada!');
+    }
+});
+
+// 3. FUNÇÃO NOVA: Calcular e mostrar o estoque resumido
+function updateStock() {
+    const summaryDiv = document.getElementById('stockSummary');
+    if (!summaryDiv) return; // Segurança caso o HTML não exista ainda
+
+    // Agrupa os itens somando as quantidades
+    const totals = donations.reduce((acc, donation) => {
+        acc[donation.item] = (acc[donation.item] || 0) + donation.quantity;
+        return acc;
+    }, {});
+
+    summaryDiv.innerHTML = '';
+
+    if (Object.keys(totals).length === 0) {
+        summaryDiv.innerHTML = '<em style="color: #888;">Nenhum item em estoque.</em>';
+        return;
+    }
+
+    for (const item in totals) {
+        const badge = document.createElement('div');
+        badge.style.cssText = `
+            background: #e8f5e9;
+            padding: 8px 12px;
+            border-radius: 8px;
+            border-left: 4px solid #2ecc71;
+            font-weight: bold;
+            font-size: 0.9rem;
+        `;
+        badge.innerHTML = `${getItemName(item)}: ${totals[item]} un`;
+        summaryDiv.appendChild(badge);
+    }
+}
+
+// 4. Função para deletar
+function deleteDonation(id) {
+    if(confirm("Deseja remover este registro?")) {
+        donations = donations.filter(d => d.id !== id);
+        saveAndRefresh();
+    }
+}
+
+// 5. Função que centraliza a atualização de tudo
+function saveAndRefresh() {
+    localStorage.setItem('donations', JSON.stringify(donations));
+    updateDonationsList();
+    updateStock(); // <--- O resumo atualiza sempre que algo muda
+}
+
+// 6. Atualizar a lista visual (histórico)
+function updateDonationsList() {
+    const list = document.getElementById('donationsList');
+    list.innerHTML = '';
+
+    donations.forEach(donation => {
+        const li = document.createElement('li');
+        li.innerHTML = `
+            <div class="item-info">
+                <strong>${getItemName(donation.item)}</strong>
+                <span>Quantidade: ${donation.quantity}</span>
+                <span class="date">Registrado em: ${donation.date}</span>
+            </div>
+            <button class="btn-delete" onclick="deleteDonation(${donation.id})">Remover</button>
+        `;
+        list.appendChild(li);
+    });
+}
+
+// 7. Tradutor de nomes
+function getItemName(key) {
+    const items = { 'arroz': 'Arroz', 'feijao': 'Feijão', 'oleo': 'Óleo' };
+    return items[key] || key;
+}
+
+// 8. Inicialização ao carregar a página
+updateDonationsList();
+updateStock();
+    </script>
+</body>
+</html>
