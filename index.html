@@ -68,7 +68,7 @@ document.getElementById('donationForm').addEventListener('submit', function(e) {
         const newDonation = {
             id: Date.now(),
             item: item,
-            quantity: parseInt(quantity), // Convertendo para número para somar certo
+            quantity: parseInt(quantity), 
             date: new Date().toLocaleDateString()
         };
 
@@ -82,7 +82,7 @@ document.getElementById('donationForm').addEventListener('submit', function(e) {
 //  Calcular e mostrar o estoque resumido
 function updateStock() {
     const summaryDiv = document.getElementById('stockSummary');
-    if (!summaryDiv) return; // Segurança caso o HTML não exista ainda
+    if (!summaryDiv) return; 
 
     const totals = donations.reduce((acc, donation) => {
         acc[donation.item] = (acc[donation.item] || 0) + donation.quantity;
@@ -121,7 +121,7 @@ function deleteDonation(id) {
 function saveAndRefresh() {
     localStorage.setItem('donations', JSON.stringify(donations));
     updateDonationsList();
-    updateStock(); // <--- O resumo atualiza sempre que algo muda
+    updateStock(); 
 }
 
 //  Atualizar a lista visual 
