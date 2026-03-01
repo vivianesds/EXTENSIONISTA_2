@@ -54,10 +54,10 @@
     </div>
 
     <script>
-       // 1. Banco de dados inicial
+       //  Banco de dados inicial
 let donations = JSON.parse(localStorage.getItem('donations')) || [];
 
-// 2. Ouvinte do Formulário (Registrar nova doação)
+// Registrar nova doação
 document.getElementById('donationForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -79,12 +79,11 @@ document.getElementById('donationForm').addEventListener('submit', function(e) {
     }
 });
 
-// 3. FUNÇÃO NOVA: Calcular e mostrar o estoque resumido
+//  Calcular e mostrar o estoque resumido
 function updateStock() {
     const summaryDiv = document.getElementById('stockSummary');
     if (!summaryDiv) return; // Segurança caso o HTML não exista ainda
 
-    // Agrupa os itens somando as quantidades
     const totals = donations.reduce((acc, donation) => {
         acc[donation.item] = (acc[donation.item] || 0) + donation.quantity;
         return acc;
@@ -112,7 +111,6 @@ function updateStock() {
     }
 }
 
-// 4. Função para deletar
 function deleteDonation(id) {
     if(confirm("Deseja remover este registro?")) {
         donations = donations.filter(d => d.id !== id);
@@ -120,14 +118,13 @@ function deleteDonation(id) {
     }
 }
 
-// 5. Função que centraliza a atualização de tudo
 function saveAndRefresh() {
     localStorage.setItem('donations', JSON.stringify(donations));
     updateDonationsList();
     updateStock(); // <--- O resumo atualiza sempre que algo muda
 }
 
-// 6. Atualizar a lista visual (histórico)
+//  Atualizar a lista visual 
 function updateDonationsList() {
     const list = document.getElementById('donationsList');
     list.innerHTML = '';
@@ -146,13 +143,11 @@ function updateDonationsList() {
     });
 }
 
-// 7. Tradutor de nomes
 function getItemName(key) {
     const items = { 'arroz': 'Arroz', 'feijao': 'Feijão', 'oleo': 'Óleo' };
     return items[key] || key;
 }
 
-// 8. Inicialização ao carregar a página
 updateDonationsList();
 updateStock();
     </script>
