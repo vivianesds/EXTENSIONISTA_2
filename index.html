@@ -5,24 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
     <title>Cesta Solidária</title>
-    <div class="card">
-    <h2>📦 Total em Estoque</h2>
-    <div id="stockSummary" style="display: flex; gap: 15px; flex-wrap: wrap;">
-        </div>
-</div>
     <style>
-        .btn-delete {
-            background: #ff4d4d;
-            color: white;
-            border: none;
-            padding: 2px 8px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-left: 10px;
-            font-size: 0.8em;
-        }
+        .btn-delete { background: #ff4d4d; color: white; border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer; margin-left: 10px; font-size: 0.8em; }
         .btn-delete:hover { background: #cc0000; }
         li { margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
     </style>
 </head>
 <body>
@@ -30,8 +17,14 @@
         <h1>🍞 Cesta Básica Solidária</h1>
         
         <div class="card">
+            <h2>📦 Total em Estoque</h2>
+            <div id="resumoEstoque" style="display: flex; gap: 15px; flex-wrap: wrap;">
+                </div>
+        </div>
+
+        <div class="card">
             <h2>Registrar Doação</h2>
-            <form id="donationForm">
+            <form id="formularioDoacao">
                 <label for="item">Item:</label>
                 <select id="item" required>
                     <option value="">Selecione...</option>
@@ -40,8 +33,8 @@
                     <option value="oleo">Óleo</option>
                 </select>
 
-                <label for="quantity">Quantidade:</label>
-                <input type="number" id="quantity" min="1" required>
+                <label for="quantidade">Quantidade:</label>
+                <input type="number" id="quantidade" min="1" required>
 
                 <button type="submit">Registrar</button>
             </form>
@@ -49,107 +42,113 @@
 
         <div class="card">
             <h2>Doações Recentes</h2>
-            <ul id="donationsList"></ul>
+            <ul id="listaDoacoes"></ul>
         </div>
     </div>
 
-    <script>
-       //  Banco de dados inicial
-let donations = JSON.parse(localStorage.getItem('donations')) || [];
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, onSnapshot, deleteDoc, doc, query, orderBy } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
-// Registrar nova doação
-document.getElementById('donationForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const item = document.getElementById('item').value;
-    const quantity = document.getElementById('quantity').value;
-
-    if (item && quantity) {
-        const newDonation = {
-            id: Date.now(),
-            item: item,
-            quantity: parseInt(quantity), 
-            date: new Date().toLocaleDateString()
+        const firebaseConfig = {
+            apiKey: "AIzaSyAY3Aw5O-mBNqTP6ko6ZA_GC7MZZqS64mA",
+            authDomain: "cesta-solidaria-fb42c.firebaseapp.com",
+            projectId: "cesta-solidaria-fb42c",
+            storageBucket: "cesta-solidaria-fb42c.firebasestorage.app",
+            messagingSenderId: "103406769851",
+            appId: "1:103406769851:web:365eab4f511c494e4fbb9e"
         };
 
-        donations.push(newDonation);
-        saveAndRefresh();
-        e.target.reset();
-        alert('Doação registrada!');
-    }
-});
+        const app = initializeApp(firebaseConfig);
+        const banco = getFirestore(app);
+        const colecaoDoacoes = collection(banco, "doacoes");
 
-//  Calcular e mostrar o estoque resumido
-function updateStock() {
-    const summaryDiv = document.getElementById('stockSummary');
-    if (!summaryDiv) return; 
+        // --- FUNÇÕES EM PORTUGUÊS ---
 
-    const totals = donations.reduce((acc, donation) => {
-        acc[donation.item] = (acc[donation.item] || 0) + donation.quantity;
-        return acc;
-    }, {});
+        // 1. Registrar Doação no Banco de Dados
+        document.getElementById('formularioDoacao').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const item = document.getElementById('item').value;
+            const quantidade = document.getElementById('quantidade').value;
 
-    summaryDiv.innerHTML = '';
+            try {
+                await addDoc(colecaoDoacoes, {
+                    item: item,
+                    quantidade: parseInt(quantidade),
+                    data: new Date().toLocaleDateString('pt-BR'),
+                    criadoEm: Date.now()
+                });
+                e.target.reset();
+                alert('Doação registrada com sucesso!');
+            } catch (erro) {
+                console.error("Erro ao salvar:", erro);
+            }
+        });
 
-    if (Object.keys(totals).length === 0) {
-        summaryDiv.innerHTML = '<em style="color: #888;">Nenhum item em estoque.</em>';
-        return;
-    }
+        // 2. Escutar mudanças no banco (Tempo Real)
+        const consulta = query(colecaoDoacoes, orderBy("criadoEm", "desc"));
+        onSnapshot(consulta, (snapshot) => {
+            const doacoes = [];
+            snapshot.forEach((doc) => {
+                doacoes.push({ id: doc.id, ...doc.data() });
+            });
+            atualizarListaVisual(doacoes);
+            atualizarEstoque(doacoes);
+        });
 
-    for (const item in totals) {
-        const badge = document.createElement('div');
-        badge.style.cssText = `
-            background: #e8f5e9;
-            padding: 8px 12px;
-            border-radius: 8px;
-            border-left: 4px solid #2ecc71;
-            font-weight: bold;
-            font-size: 0.9rem;
-        `;
-        badge.innerHTML = `${getItemName(item)}: ${totals[item]} un`;
-        summaryDiv.appendChild(badge);
-    }
-}
+        // 3. Atualizar a lista na tela
+        function atualizarListaVisual(doacoes) {
+            const lista = document.getElementById('listaDoacoes');
+            lista.innerHTML = '';
 
-function deleteDonation(id) {
-    if(confirm("Deseja remover este registro?")) {
-        donations = donations.filter(d => d.id !== id);
-        saveAndRefresh();
-    }
-}
+            doacoes.forEach(doacao => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <div class="info-item">
+                        <strong>${obterNomeItem(doacao.item)}</strong>
+                        <span>Quantidade: ${doacao.quantidade}</span>
+                        <br><small>Registrado em: ${doacao.data}</small>
+                    </div>
+                    <button class="btn-delete" data-id="${doacao.id}">Remover</button>
+                `;
+                lista.appendChild(li);
+            });
 
-function saveAndRefresh() {
-    localStorage.setItem('donations', JSON.stringify(donations));
-    updateDonationsList();
-    updateStock(); 
-}
+            // Adicionar evento de clique nos botões de remover
+            document.querySelectorAll('.btn-delete').forEach(botao => {
+                botao.onclick = () => removerDoacao(botao.getAttribute('data-id'));
+            });
+        }
 
-//  Atualizar a lista visual 
-function updateDonationsList() {
-    const list = document.getElementById('donationsList');
-    list.innerHTML = '';
+        // 4. Atualizar o resumo do estoque
+        function atualizarEstoque(doacoes) {
+            const resumoDiv = document.getElementById('resumoEstoque');
+            const totais = doacoes.reduce((acc, d) => {
+                acc[d.item] = (acc[d.item] || 0) + d.quantidade;
+                return acc;
+            }, {});
 
-    donations.forEach(donation => {
-        const li = document.createElement('li');
-        li.innerHTML = `
-            <div class="item-info">
-                <strong>${getItemName(donation.item)}</strong>
-                <span>Quantidade: ${donation.quantity}</span>
-                <span class="date">Registrado em: ${donation.date}</span>
-            </div>
-            <button class="btn-delete" onclick="deleteDonation(${donation.id})">Remover</button>
-        `;
-        list.appendChild(li);
-    });
-}
+            resumoDiv.innerHTML = '';
+            for (const item in totais) {
+                const badge = document.createElement('div');
+                badge.style.cssText = "background: #e8f5e9; padding: 8px 12px; border-radius: 8px; border-left: 4px solid #2ecc71; font-weight: bold;";
+                badge.innerHTML = `${obterNomeItem(item)}: ${totais[item]} un`;
+                resumoDiv.appendChild(badge);
+            }
+        }
 
-function getItemName(key) {
-    const items = { 'arroz': 'Arroz', 'feijao': 'Feijão', 'oleo': 'Óleo' };
-    return items[key] || key;
-}
+        // 5. Remover doação do banco
+        async function removerDoacao(id) {
+            if(confirm("Deseja remover este registro permanentemente?")) {
+                await deleteDoc(doc(banco, "doacoes", id));
+            }
+        }
 
-updateDonationsList();
-updateStock();
+        function obterNomeItem(chave) {
+            const itens = { 'arroz': 'Arroz', 'feijao': 'Feijão', 'oleo': 'Óleo' };
+            return itens[chave] || chave;
+        }
     </script>
 </body>
 </html>
