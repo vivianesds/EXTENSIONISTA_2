@@ -63,9 +63,7 @@
         const banco = getFirestore(app);
         const colecaoDoacoes = collection(banco, "doacoes");
 
-        // --- FUNÇÕES EM PORTUGUÊS ---
-
-        // 1. Registrar Doação no Banco de Dados
+        // Registrar Doação no Banco de Dados
         document.getElementById('formularioDoacao').addEventListener('submit', async function(e) {
             e.preventDefault();
             
@@ -86,7 +84,7 @@
             }
         });
 
-        // 2. Escutar mudanças no banco (Tempo Real)
+        // mudanças no banco (Tempo Real)
         const consulta = query(colecaoDoacoes, orderBy("criadoEm", "desc"));
         onSnapshot(consulta, (snapshot) => {
             const doacoes = [];
@@ -97,7 +95,7 @@
             atualizarEstoque(doacoes);
         });
 
-        // 3. Atualizar a lista na tela
+        // Atualizar a lista na tela
         function atualizarListaVisual(doacoes) {
             const lista = document.getElementById('listaDoacoes');
             lista.innerHTML = '';
@@ -115,13 +113,12 @@
                 lista.appendChild(li);
             });
 
-            // Adicionar evento de clique nos botões de remover
             document.querySelectorAll('.btn-delete').forEach(botao => {
                 botao.onclick = () => removerDoacao(botao.getAttribute('data-id'));
             });
         }
 
-        // 4. Atualizar o resumo do estoque
+        // Atualizar o resumo do estoque
         function atualizarEstoque(doacoes) {
             const resumoDiv = document.getElementById('resumoEstoque');
             const totais = doacoes.reduce((acc, d) => {
@@ -138,7 +135,7 @@
             }
         }
 
-        // 5. Remover doação do banco
+        // Remover doação do banco
         async function removerDoacao(id) {
             if(confirm("Deseja remover este registro permanentemente?")) {
                 await deleteDoc(doc(banco, "doacoes", id));
